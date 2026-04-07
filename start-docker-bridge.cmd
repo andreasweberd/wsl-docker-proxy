@@ -1,22 +1,31 @@
 @echo off
-REM Startet die WSL-Docker-TCP-Bridge im Hintergrund
-REM Dies exponiert den WSL Docker-Daemon unter tcp://127.0.0.1:2375
-REM für Java-Prozesse wie Maven digest-plugin
-
 setlocal EnableDelayedExpansion
 
-REM Prüfe ob Bridge bereits läuft
-netstat -ano 2>nul | findstr /R ":2375.*LISTENING" >nul
+REM Check in WSL if port 2375 is already listening.
+wsl sh -lc "ss -lnt 'sport = :2375' | grep -q 2375"
 if not errorlevel 1 (
     echo [docker-proxy-bridge] Bridge already running on port 2375
     exit /b 0
 )
 
-echo [docker-proxy-bridge] Starting WSL Docker TCP bridge...
+set "BRIDGE_WIN=%~dp0wsl-docker-tcp-bridge.py"
+set "BRIDGE_WIN=%BRIDGE_WIN:\=/%"
+for /f "delims=" %%I in ('wsl wslpath -a "%BRIDGE_WIN%"') do set "BRIDGE_PY=%%I"
 
-REM Starte Python-Skript im WSL als Daemon
-wsl python3 -u %~dp0wsl-docker-tcp-bridge.py > "%~dp0wsl-docker-bridge.log" 2>&1 &
+if not defined BRIDGE_PY (
+    echo [docker-proxy-bridge] ERROR: Could not resolve WSL path for bridge script.
+    exit /b 1
+)
+
+echo [docker-proxy-bridge] Starting WSL Docker TCP bridge...
+start "docker-proxy-bridge" /b wsl python3 -u "!BRIDGE_PY!" > "%~dp0wsl-docker-bridge.log" 2>&1
 
 timeout /t 2 /nobreak >nul
-echo [docker-proxy-bridge] Bridge started. Set: $env:DOCKER_HOST="tcp://127.0.0.1:2375"
+wsl sh -lc "ss -lnt 'sport = :2375' | grep -q 2375"
+if errorlevel 1 (
+    echo [docker-proxy-bridge] ERROR: Bridge did not start. See wsl-docker-bridge.log
+    exit /b 1
+)
 
+echo [docker-proxy-bridge] Bridge started. Set DOCKER_HOST=tcp://127.0.0.1:2375
+exit /b 0
