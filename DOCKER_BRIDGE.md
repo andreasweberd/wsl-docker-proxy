@@ -10,6 +10,12 @@ $env:DOCKER_HOST = "tcp://127.0.0.1:2375"
 docker version
 ```
 
+## Autostart einrichten (nach Reboot automatisch)
+
+✅ **Autostart ist bereits installiert!** Der Docker Bridge startet jetzt nach jedem Reboot automatisch.
+
+Verknüpfung: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Docker-Bridge-Startup.lnk`
+
 ## One-time setup for IntelliJ / GUI apps
 
 ```powershell
